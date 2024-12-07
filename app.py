@@ -5,6 +5,9 @@ from urllib.request import urlopen
 import csv
 import struct
 from datetime import datetime, timedelta
+import requests
+import re  # 정규 표현식 사용을 위한 import
+
 
 app = Flask(__name__)
 
@@ -13,8 +16,8 @@ domain = "https://apihub.kma.go.kr/api/typ01/url/kma_sfctm5.php?"
 obs = "obs=TA&"
 tm2 = "tm2=" + datetime.now().strftime("%Y%m%d%H%M") + "&"
 stn_id = "stn=108&"
-option = "disp=0&help=0&authKey="
-auth = "mUwDsefKRcSMA7HnysXE6g"
+option = "disp=0&help=0&"
+auth = "authKey=mUwDsefKRcSMA7HnysXE6g"
 # ========================================================
 
 # ================== 3일 예보 서울특별시 ==================
@@ -22,7 +25,8 @@ domain2 = "https://apihub.kma.go.kr/api/typ01/url/fct_afs_dl.php?"
 reg = "reg=11B10101&"                                              # 서울 예보구역 코드
 disp2 = "disp=0&"
 help2 = "help=0&"
-auth2 = "authKey=mUwDsefKRcSMA7HnysXE6g"
+# ========================================================
+
 
 # 현재 날짜와 시간 구하기
 today = datetime.now()
@@ -133,9 +137,9 @@ def get_forecast_weather():
         start_time = time.time()
 
         # URL로부터 바이너리 데이터를 받아옴
-        with urlopen(domain2 + reg + tmfc1 + tmfc2 + disp2 + help2 + auth2) as f:
+        with urlopen(domain2 + reg + tmfc1 + tmfc2 + disp2 + help2 + auth) as f:
             binary_data = f.read()
-        print(domain2 + reg + tmfc1 + tmfc2 + disp2 + help2 + auth2)
+        print(domain2 + reg + tmfc1 + tmfc2 + disp2 + help2 + auth)
 
         # EUC-KR로 디코딩하여 텍스트 데이터로 변환
         text_data = binary_data.decode('euc-kr')
@@ -154,8 +158,71 @@ def get_forecast_weather():
     except Exception as e:
         print(f"Error: {e}")
         return str(e), None
+    
+
+def extract_avg_temperature(data):
+    """
+    Extracts the average temperature from the data by parsing through the CSV content.
+    """
+    # Remove unnecessary tags to get the real data
+    clean_data = re.sub(r'#START7777|#7777END', '', data, flags=re.DOTALL)
+
+    # Split the data into lines and process each line
+    lines = clean_data.strip().splitlines()
+
+    temperatures = []
+    
+    for line in lines:
+        # Skip comment lines
+        if line.startswith('#') or not line.strip():
+            continue
+        
+        # Split the line by commas
+        columns = line.split(',')
+        
+        # Ensure there are enough columns (at least 11 for temperature data)
+        if len(columns) > 10:
+            avg_temperature = columns[10]  # The 11th column contains the temperature
+            temperatures.append(float(avg_temperature))
+    
+    return temperatures
 
 
+def calculate_daily_avg_temperature(current_date):
+    """
+    Fetches the data for the selected date and calculates the average temperature.
+    """
+    try:
+        # Format the date for the KMA API
+        tm = current_date.strftime('%Y%m%d')
+
+        # Build the URL for fetching data
+        url = f"https://apihub.kma.go.kr/api/typ01/url/kma_sfcdd.php?tm={tm}&stn=108&help=0&authKey=mUwDsefKRcSMA7HnysXE6g"
+        
+        # Fetch the data from the URL
+        response = requests.get(url)
+        
+        if response.status_code != 200:
+            print(f"Failed to fetch data. HTTP Status: {response.status_code}")
+            return None
+        
+        data = response.text
+        print("API 응답 데이터:", data)  # 응답 데이터 디버깅
+        
+        # Extract the average temperatures from the fetched data
+        temperatures = extract_avg_temperature(data)
+        
+        if not temperatures:
+            print("No temperature data found.")
+            return None
+
+        # Calculate the average temperature
+        avg_temperature = sum(temperatures) / len(temperatures)
+        return round(avg_temperature, 2)
+    
+    except Exception as e:
+        print(f"Error while calculating daily average temperature: {e}")
+        return None
 
 def format_date(date_str):
     try:
@@ -330,13 +397,21 @@ def get_weather():
             return render_template('index.html', date=formatted_date, temperature=temperature, execution_time=execution_time)
     return render_template('index.html', error="Failed to get weather data")
 
-@app.route('/monthly_avg_temps', methods=['GET'])
-def monthly_avg_temps():
-    current_date = datetime.now()
-    monthly_avg_temps = calculate_monthly_avg_temperature(current_date)
+@app.route('/get_avg_temperature', methods=['POST'])
+def get_avg_temperature():
+    try:
+        date_str = request.form['tm']
+        current_date = datetime.strptime(date_str, '%Y%m%d')
+        avg_temp = calculate_daily_avg_temperature(current_date)
 
-    # 평균 온도를 출력
-    return render_template('index.html', monthly_avg_temps=monthly_avg_temps)
+        if avg_temp is not None:
+            formatted_date = current_date.strftime('%Y년 %m월 %d일')
+            return render_template('index.html', avg_temp=avg_temp, date=formatted_date)
+        else:
+            return render_template('index.html', error="Failed to calculate average temperature.")
+    except Exception as e:
+        print(f"Error fetching average temperature: {e}")
+        return render_template('index.html', error="An error occurred while fetching the data.")
 
 @app.route('/get_forecast', methods=['POST'])
 def get_forecast():

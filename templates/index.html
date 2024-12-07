@@ -47,6 +47,13 @@
         .result {
             margin-top: 2em;
         }
+        input[type="text"] {
+            padding: 0.5em;
+            font-size: 1em;
+            margin: 0.5em;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
     </style>
 </head>
 <body>
@@ -63,6 +70,24 @@
                 <div class="result">
                     <h3>{{ date }}에 대한 서울특별시의 현재 온도는 <strong>{{ temperature }}°C</strong> 입니다.</h3>
                     <p>Execution Time: {{ execution_time }} seconds</p>
+                </div>
+            {% elif error %}
+                <div class="error">
+                    <h3>{{ error }}</h3>
+                </div>
+            {% endif %}
+        </section>
+
+        <section>
+            <h2>Average Temperature for a Specific Date</h2>
+            <form action="/get_avg_temperature" method="post">
+                <label for="tm">Enter Date (YYYYMMDD):</label>
+                <input type="text" id="tm" name="tm" placeholder="20241206" required>
+                <button type="submit">Get Average Temperature</button>
+            </form>
+            {% if avg_temp %}
+                <div class="result">
+                    <h3>{{ date }}에 대한 서울특별시의 평균 온도는 <strong>{{ avg_temp }}°C</strong> 입니다.</h3>
                 </div>
             {% elif error %}
                 <div class="error">
@@ -94,19 +119,6 @@
             {% elif error %}
                 <div class="error">
                     <h3>{{ error }}</h3>
-                </div>
-            {% endif %}
-        </section>
-
-        <section>
-            <h2>Average Monthly Temperature</h2>
-            {% if avg_temp %}
-                <div class="result">
-                    <h3>이번 달 평균 온도: <strong>{{ avg_temp }}°C</strong></h3>
-                </div>
-            {% else %}
-                <div class="error">
-                    <h3>월별 평균 온도를 가져오는데 실패했습니다.</h3>
                 </div>
             {% endif %}
         </section>
