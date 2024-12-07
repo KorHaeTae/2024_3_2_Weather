@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Data Fetcher</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+            text-align: center;
+        }
+        header {
+            background: #4CAF50;
+            color: white;
+            padding: 1em 0;
+        }
+        main {
+            padding: 2em;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 0.7em 1.5em;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 0.5em;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            margin: 0.5em 0;
+        }
+        .error {
+            color: red;
+        }
+        .result {
+            margin-top: 2em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Weather Data Fetcher</h1>
+    </header>
+    <main>
+        <section>
+            <h2>Current Weather Data</h2>
+            <form action="/get_weather" method="post">
+                <button type="submit">Get Current Weather</button>
+            </form>
+            {% if temperature %}
+                <div class="result">
+                    <h3>{{ date }}에 대한 서울특별시의 현재 온도는 <strong>{{ temperature }}°C</strong> 입니다.</h3>
+                    <p>Execution Time: {{ execution_time }} seconds</p>
+                </div>
+            {% elif error %}
+                <div class="error">
+                    <h3>{{ error }}</h3>
+                </div>
+            {% endif %}
+        </section>
+
+        <section>
+            <h2>3-Day Weather Forecast</h2>
+            <form action="/get_forecast" method="post">
+                <button type="submit">Get 3-Day Forecast</button>
+            </form>
+            {% if forecast %}
+                <div class="result">
+                    <h3>3-Day Weather Forecast:</h3>
+                    <ul>
+                    {% for data in forecast %}
+                        <li>
+                            <strong>{{ data[0] }}</strong>: 
+                            Temperature: {{ data[1] }}°C, 
+                            Rain Probability: {{ data[2] }}%, 
+                            Rain State: {{ data[3] }}, 
+                            Forecast: {{ data[4] }}
+                        </li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            {% elif error %}
+                <div class="error">
+                    <h3>{{ error }}</h3>
+                </div>
+            {% endif %}
+        </section>
+
+        <section>
+            <h2>Average Monthly Temperature</h2>
+            {% if avg_temp %}
+                <div class="result">
+                    <h3>이번 달 평균 온도: <strong>{{ avg_temp }}°C</strong></h3>
+                </div>
+            {% else %}
+                <div class="error">
+                    <h3>월별 평균 온도를 가져오는데 실패했습니다.</h3>
+                </div>
+            {% endif %}
+        </section>
+
+    </main>
+</body>
+</html>
